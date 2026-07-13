@@ -8,7 +8,12 @@ const COIN_ICONS = {
     'dogecoin': 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',
     'avalanche-2': 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
     'polkadot': 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png',
-    'matic-network': 'https://assets.coingecko.com/coins/images/4713/small/matic-token-icon.png'
+    'matic-network': 'https://assets.coingecko.com/coins/images/4713/small/matic-token-icon.png',
+    'chainlink': 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',
+    'uniswap': 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png',
+    'the-open-network': 'https://assets.coingecko.com/coins/images/17980/small/ton_symbol.png',
+    'shiba-inu': 'https://assets.coingecko.com/coins/images/11939/small/shiba.png',
+    'tron': 'https://assets.coingecko.com/coins/images/1094/small/tron-logo.png'
 };
 
 let currentPrices = {};
@@ -18,6 +23,8 @@ const coinGrid = document.getElementById('coin-grid');
 const lastUpdateEl = document.getElementById('last-update');
 const tradesBody = document.getElementById('trades-body');
 const totalPnlEl = document.getElementById('total-pnl');
+const walletBalanceEl = document.getElementById('wallet-balance');
+const walletBtn = document.getElementById('wallet-btn');
 
 const tradeModal = document.getElementById('trade-modal');
 const closeModalBtn = document.getElementById('close-modal');
@@ -39,9 +46,27 @@ function formatMoney(amount) {
         style: 'currency',
         currency: 'USD',
         minimumFractionDigits: 2,
-        maximumFractionDigits: amount < 1 ? 4 : 2
+        maximumFractionDigits: amount < 1 && amount > 0 ? 4 : 2
     }).format(amount);
 }
+
+function renderBalance() {
+    walletBalanceEl.textContent = formatMoney(Storage.getBalance());
+}
+
+walletBtn.addEventListener('click', () => {
+    const current = Storage.getBalance();
+    const newBalanceStr = prompt('Yeni kasa bakiyenizi girin ($):', current);
+    if (newBalanceStr !== null) {
+        const newBalance = parseFloat(newBalanceStr);
+        if (!isNaN(newBalance) && newBalance >= 0) {
+            Storage.setBalance(newBalance);
+            renderBalance();
+        } else {
+            alert('Geçersiz bir tutar girdiniz.');
+        }
+    }
+});
 
 function formatPercentage(value) {
     const sign = value >= 0 ? '+' : '';
@@ -138,18 +163,37 @@ function renderTrades() {
         const amount = parseFloat(trade.amount);
         const buyPrice = parseFloat(trade.buyPrice);
         
+        const tradeType = trade.type || 'long';
+        
         let pnl, isCompleted;
-        if (currentPrice >= trade.sellPrice && trade.status === 'active') {
-             pnl = (trade.sellPrice - buyPrice) * amount;
-             isCompleted = true;
-             Storage.updateTradeStatus(trade.id, 'completed');
-             trade.status = 'completed';
-        } else if (trade.status === 'completed') {
-            pnl = (trade.sellPrice - buyPrice) * amount;
-            isCompleted = true;
+        if (tradeType === 'long') {
+            if (currentPrice >= trade.sellPrice && trade.status === 'active') {
+                 pnl = (trade.sellPrice - buyPrice) * amount;
+                 isCompleted = true;
+                 Storage.updateTradeStatus(trade.id, 'completed');
+                 Storage.updateBalance((buyPrice * amount) + pnl);
+                 trade.status = 'completed';
+            } else if (trade.status === 'completed') {
+                pnl = (trade.sellPrice - buyPrice) * amount;
+                isCompleted = true;
+            } else {
+                 pnl = (currentPrice - buyPrice) * amount;
+                 isCompleted = false;
+            }
         } else {
-             pnl = (currentPrice - buyPrice) * amount;
-             isCompleted = false;
+            if (currentPrice <= trade.sellPrice && trade.status === 'active') {
+                 pnl = (buyPrice - trade.sellPrice) * amount;
+                 isCompleted = true;
+                 Storage.updateTradeStatus(trade.id, 'completed');
+                 Storage.updateBalance((buyPrice * amount) + pnl);
+                 trade.status = 'completed';
+            } else if (trade.status === 'completed') {
+                pnl = (buyPrice - trade.sellPrice) * amount;
+                isCompleted = true;
+            } else {
+                 pnl = (buyPrice - currentPrice) * amount;
+                 isCompleted = false;
+            }
         }
 
         totalPnl += pnl;
@@ -169,6 +213,7 @@ function renderTrades() {
             <td>${formatMoney(buyPrice)}</td>
             <td>${formatMoney(trade.sellPrice)}</td>
             <td>${formatMoney(currentPrice)}</td>
+            <td><span class="status-badge" style="background: ${tradeType === 'long' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}; color: ${tradeType === 'long' ? '#34D399' : '#F87171'}">${tradeType.toUpperCase()}</span></td>
             <td class="${pnlClass}">${pnlSign}${formatMoney(pnl)}</td>
             <td>
                 <span class="status-badge ${isCompleted ? 'status-completed' : 'status-active'}">
@@ -195,8 +240,26 @@ function renderTrades() {
         btn.addEventListener('click', (e) => {
             const id = e.currentTarget.getAttribute('data-id');
             if(confirm('Bu işlemi silmek istediğinize emin misiniz?')) {
+                const allTrades = Storage.getTrades();
+                const tradeToDelete = allTrades.find(t => t.id === id);
+                if (tradeToDelete && tradeToDelete.status === 'active') {
+                    const currentPrice = currentPrices[tradeToDelete.coinId] || tradeToDelete.buyPrice;
+                    const amount = parseFloat(tradeToDelete.amount);
+                    const buyPrice = parseFloat(tradeToDelete.buyPrice);
+                    const tradeType = tradeToDelete.type || 'long';
+                    
+                    let pnl;
+                    if (tradeType === 'long') {
+                        pnl = (currentPrice - buyPrice) * amount;
+                    } else {
+                        pnl = (buyPrice - currentPrice) * amount;
+                    }
+                    
+                    Storage.updateBalance((buyPrice * amount) + pnl);
+                }
                 Storage.removeTrade(id);
                 renderTrades();
+                renderBalance();
             }
         });
     });
@@ -210,6 +273,7 @@ async function updateMarketData() {
     if (data) {
         renderCoinCards(data);
         renderTrades();
+        renderBalance();
         
         const now = new Date();
         lastUpdateEl.textContent = `Son güncelleme: ${now.toLocaleTimeString()}`;
@@ -221,12 +285,28 @@ async function updateMarketData() {
 tradeForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
+    const buyPrice = parseFloat(buyPriceInput.value);
+    const amount = parseFloat(amountInput.value);
+    const cost = buyPrice * amount;
+    
+    const currentBalance = Storage.getBalance();
+    if (cost > currentBalance) {
+        alert('Yetersiz bakiye! Kasanızda bu işlem için yeterli tutar bulunmuyor.');
+        return;
+    }
+    
+    Storage.updateBalance(-cost);
+    renderBalance();
+    
+    const tradeType = document.querySelector('input[name="trade-type"]:checked').value;
+    
     const newTrade = {
         coinId: coinIdInput.value,
         coinSymbol: coinSymbolInput.value,
-        buyPrice: parseFloat(buyPriceInput.value),
+        buyPrice: buyPrice,
         sellPrice: parseFloat(sellPriceInput.value),
-        amount: parseFloat(amountInput.value)
+        amount: amount,
+        type: tradeType
     };
     
     Storage.addTrade(newTrade);
@@ -235,6 +315,7 @@ tradeForm.addEventListener('submit', (e) => {
 });
 
 async function init() {
+    renderBalance();
     await updateMarketData();
     updateInterval = setInterval(updateMarketData, 30000);
 }

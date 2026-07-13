@@ -16,9 +16,21 @@
     </div>
 
     <header class="header">
-        <div class="container">
-            <h1 class="logo"><span>Kripto</span>Tracker</h1>
-            <p class="subtitle">Canlı piyasa verileri ve işlem takip merkezi</p>
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1 class="logo"><span>Kripto</span>Tracker</h1>
+                <p class="subtitle">Canlı piyasa verileri ve işlem takip merkezi</p>
+            </div>
+            <div class="wallet-info glass-panel" style="padding: 12px 20px; display: flex; align-items: center; gap: 12px; cursor: pointer;" id="wallet-btn" title="Bakiyeyi Düzenle">
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Kasa Bakiyesi</span>
+                    <span id="wallet-balance" style="font-size: 1.3rem; font-weight: 700; color: var(--accent-blue);">$0.00</span>
+                </div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted);">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+            </div>
         </div>
     </header>
 
@@ -57,6 +69,7 @@
                             <th>Alış Fiyatı</th>
                             <th>Satış Hedefi</th>
                             <th>Güncel Fiyat</th>
+                            <th>Yön</th>
                             <th>Kâr/Zarar</th>
                             <th>Durum</th>
                             <th>İşlem</th>
@@ -64,7 +77,7 @@
                     </thead>
                     <tbody id="trades-body">
                         <tr class="empty-row">
-                            <td colspan="8">Henüz işlem bulunmuyor. Bir coin seçerek işlem ekleyebilirsiniz.</td>
+                            <td colspan="9">Henüz işlem bulunmuyor. Bir coin seçerek işlem ekleyebilirsiniz.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -88,6 +101,18 @@
                         <img id="modal-coin-img" src="" alt="">
                         <span id="modal-coin-name">Bitcoin</span>
                         <span id="modal-coin-current-price" class="current-price-badge">$0.00</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>İşlem Yönü</label>
+                    <div class="form-row" style="gap: 16px; margin-bottom: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-main); background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                            <input type="radio" name="trade-type" value="long" checked style="width: auto;"> Long (Yükseliş)
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-main); background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                            <input type="radio" name="trade-type" value="short" style="width: auto;"> Short (Düşüş)
+                        </label>
                     </div>
                 </div>
 

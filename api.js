@@ -8,7 +8,12 @@ const TARGET_COINS = [
     { id: 'dogecoin', symbol: 'doge', name: 'Dogecoin' },
     { id: 'avalanche-2', symbol: 'avax', name: 'Avalanche' },
     { id: 'polkadot', symbol: 'dot', name: 'Polkadot' },
-    { id: 'matic-network', symbol: 'matic', name: 'Polygon' }
+    { id: 'matic-network', symbol: 'matic', name: 'Polygon' },
+    { id: 'chainlink', symbol: 'link', name: 'Chainlink' },
+    { id: 'uniswap', symbol: 'uni', name: 'Uniswap' },
+    { id: 'the-open-network', symbol: 'ton', name: 'Toncoin' },
+    { id: 'shiba-inu', symbol: 'shib', name: 'Shiba Inu' },
+    { id: 'tron', symbol: 'trx', name: 'TRON' }
 ];
 
 const COIN_IDS = TARGET_COINS.map(c => c.id).join(',');

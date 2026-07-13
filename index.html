@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kripto Al-Sat Takip Merkezi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-elements">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <header class="header">
+        <div class="container">
+            <h1 class="logo"><span>Kripto</span>Tracker</h1>
+            <p class="subtitle">Canlı piyasa verileri ve işlem takip merkezi</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="market-section">
+            <div class="section-header">
+                <h2>Canlı Piyasalar</h2>
+                <div class="update-indicator">
+                    <span class="dot"></span>
+                    <span id="last-update">Canlı güncelleniyor...</span>
+                </div>
+            </div>
+            
+            <div id="coin-grid" class="coin-grid">
+                <div class="loading-state">Piyasa verileri yükleniyor...</div>
+            </div>
+        </section>
+
+        <section class="trades-section">
+            <div class="section-header">
+                <h2>Açık İşlemler</h2>
+                <div class="stats-summary">
+                    <div class="stat-item">
+                        <span class="stat-label">Toplam Kâr/Zarar:</span>
+                        <span id="total-pnl" class="stat-value neutral">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container glass-panel">
+                <table class="trades-table">
+                    <thead>
+                        <tr>
+                            <th>Coin</th>
+                            <th>Miktar</th>
+                            <th>Alış Fiyatı</th>
+                            <th>Satış Hedefi</th>
+                            <th>Güncel Fiyat</th>
+                            <th>Kâr/Zarar</th>
+                            <th>Durum</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trades-body">
+                        <tr class="empty-row">
+                            <td colspan="8">Henüz işlem bulunmuyor. Bir coin seçerek işlem ekleyebilirsiniz.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div id="trade-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3 id="modal-title">Yeni İşlem Ekle</h3>
+                <button id="close-modal" class="close-btn">&times;</button>
+            </div>
+            <form id="trade-form">
+                <input type="hidden" id="coin-id">
+                <input type="hidden" id="coin-symbol">
+                
+                <div class="form-group">
+                    <label>Seçili Coin</label>
+                    <div id="selected-coin-display" class="coin-display">
+                        <img id="modal-coin-img" src="" alt="">
+                        <span id="modal-coin-name">Bitcoin</span>
+                        <span id="modal-coin-current-price" class="current-price-badge">$0.00</span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="buy-price">Alış Fiyatı ($)</label>
+                        <input type="number" id="buy-price" step="any" required placeholder="0.00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sell-price">Satış Hedefi ($)</label>
+                        <input type="number" id="sell-price" step="any" required placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="amount">Miktar (Coin Adedi)</label>
+                    <input type="number" id="amount" step="any" required placeholder="0.00">
+                    <div class="amount-calc">
+                        <span class="calc-label">Toplam Değer:</span>
+                        <span id="total-value-calc">$0.00</span>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="cancel-btn" class="btn btn-secondary">İptal</button>
+                    <button type="submit" class="btn btn-primary">İşlemi Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="storage.js"></script>
+    <script src="api.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

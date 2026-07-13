@@ -1,49 +1,78 @@
 const TARGET_COINS = [
-    { id: 'bitcoin', symbol: 'btc', name: 'Bitcoin' },
-    { id: 'ethereum', symbol: 'eth', name: 'Ethereum' },
-    { id: 'binancecoin', symbol: 'bnb', name: 'Binance Coin' },
-    { id: 'solana', symbol: 'sol', name: 'Solana' },
-    { id: 'ripple', symbol: 'xrp', name: 'XRP' },
-    { id: 'cardano', symbol: 'ada', name: 'Cardano' },
-    { id: 'dogecoin', symbol: 'doge', name: 'Dogecoin' },
-    { id: 'avalanche-2', symbol: 'avax', name: 'Avalanche' },
-    { id: 'polkadot', symbol: 'dot', name: 'Polkadot' },
-    { id: 'matic-network', symbol: 'matic', name: 'Polygon' },
-    { id: 'chainlink', symbol: 'link', name: 'Chainlink' },
-    { id: 'uniswap', symbol: 'uni', name: 'Uniswap' },
-    { id: 'the-open-network', symbol: 'ton', name: 'Toncoin' },
-    { id: 'shiba-inu', symbol: 'shib', name: 'Shiba Inu' },
-    { id: 'tron', symbol: 'trx', name: 'TRON' }
+    { id: 'bitcoin', symbol: 'btc', name: 'Bitcoin', stream: 'btcusdt' },
+    { id: 'ethereum', symbol: 'eth', name: 'Ethereum', stream: 'ethusdt' },
+    { id: 'binancecoin', symbol: 'bnb', name: 'Binance Coin', stream: 'bnbusdt' },
+    { id: 'solana', symbol: 'sol', name: 'Solana', stream: 'solusdt' },
+    { id: 'ripple', symbol: 'xrp', name: 'XRP', stream: 'xrpusdt' },
+    { id: 'cardano', symbol: 'ada', name: 'Cardano', stream: 'adausdt' },
+    { id: 'dogecoin', symbol: 'doge', name: 'Dogecoin', stream: 'dogeusdt' },
+    { id: 'avalanche-2', symbol: 'avax', name: 'Avalanche', stream: 'avaxusdt' },
+    { id: 'polkadot', symbol: 'dot', name: 'Polkadot', stream: 'dotusdt' },
+    { id: 'polygon-ecosystem-token', symbol: 'pol', name: 'Polygon', stream: 'polusdt' },
+    { id: 'chainlink', symbol: 'link', name: 'Chainlink', stream: 'linkusdt' },
+    { id: 'uniswap', symbol: 'uni', name: 'Uniswap', stream: 'uniusdt' },
+    { id: 'the-open-network', symbol: 'ton', name: 'Toncoin', stream: 'tonusdt' },
+    { id: 'shiba-inu', symbol: 'shib', name: 'Shiba Inu', stream: 'shibusdt' },
+    { id: 'tron', symbol: 'trx', name: 'TRON', stream: 'trxusdt' }
 ];
 
-const COIN_IDS = TARGET_COINS.map(c => c.id).join(',');
+class BinanceSocket {
+    constructor(onUpdateCallback) {
+        this.onUpdateCallback = onUpdateCallback;
+        this.socket = null;
+        this.prices = {}; // Bellekte son fiyatları tutalım
+        
+        // Başlangıç verilerini sıfırla
+        TARGET_COINS.forEach(coin => {
+            this.prices[coin.id] = {
+                ...coin,
+                price: 0,
+                change24h: 0
+            };
+        });
+    }
 
-class Api {
-    static async fetchPrices() {
-        try {
-            const url = `https://api.coingecko.com/api/v3/simple/price?ids=${COIN_IDS}&vs_currencies=usd&include_24hr_change=true`;
-            
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error('API Hatası');
+    connect() {
+        const streams = TARGET_COINS.map(c => `${c.stream}@ticker`).join('/');
+        const url = `wss://stream.binance.com:9443/stream?streams=${streams}`;
+        
+        this.socket = new WebSocket(url);
+        
+        this.socket.onopen = () => {
+            console.log("Binance WebSocket bağlandı.");
+            if (this.onStatusChange) this.onStatusChange('connected');
+        };
+
+        this.socket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.data) {
+                const data = message.data;
+                const streamName = message.stream.split('@')[0];
+                
+                // Hangi coin olduğunu bul
+                const coin = TARGET_COINS.find(c => c.stream === streamName);
+                if (coin) {
+                    this.prices[coin.id] = {
+                        ...coin,
+                        price: parseFloat(data.c), // c: current close price
+                        change24h: parseFloat(data.P) // P: price change percent
+                    };
+                    
+                    // Callback'i tüm coinlerin güncel haliyle tetikle
+                    this.onUpdateCallback(Object.values(this.prices));
+                }
             }
-            
-            const data = await response.json();
-            
-            const processedData = TARGET_COINS.map(coin => {
-                const coinData = data[coin.id];
-                return {
-                    ...coin,
-                    price: coinData ? coinData.usd : 0,
-                    change24h: coinData ? coinData.usd_24h_change : 0,
-                    image: `https://assets.coingecko.com/coins/images/1/small/bitcoin.png`
-                };
-            });
-            
-            return processedData;
-        } catch (error) {
-            console.error(error);
-            return null;
-        }
+        };
+
+        this.socket.onerror = (error) => {
+            console.error("WebSocket Hatası:", error);
+            if (this.onStatusChange) this.onStatusChange('error');
+        };
+
+        this.socket.onclose = () => {
+            console.log("WebSocket kapandı. Yeniden bağlanılıyor...");
+            if (this.onStatusChange) this.onStatusChange('disconnected');
+            setTimeout(() => this.connect(), 3000);
+        };
     }
 }

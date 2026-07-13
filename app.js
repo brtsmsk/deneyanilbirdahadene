@@ -8,7 +8,7 @@ const COIN_ICONS = {
     'dogecoin': 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',
     'avalanche-2': 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',
     'polkadot': 'https://assets.coingecko.com/coins/images/12171/small/polkadot.png',
-    'matic-network': 'https://assets.coingecko.com/coins/images/4713/small/matic-token-icon.png',
+    'polygon-ecosystem-token': 'https://assets.coingecko.com/coins/images/4713/small/matic-token-icon.png',
     'chainlink': 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',
     'uniswap': 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png',
     'the-open-network': 'https://assets.coingecko.com/coins/images/17980/small/ton_symbol.png',
@@ -30,6 +30,11 @@ const tradeModal = document.getElementById('trade-modal');
 const closeModalBtn = document.getElementById('close-modal');
 const cancelBtn = document.getElementById('cancel-btn');
 const tradeForm = document.getElementById('trade-form');
+
+const orderTypeRadios = document.querySelectorAll('input[name="order-type"]');
+const botSettings = document.getElementById('bot-settings');
+const botRecurringInput = document.getElementById('bot-recurring');
+const modalSubmitBtn = document.getElementById('modal-submit-btn');
 
 const coinIdInput = document.getElementById('coin-id');
 const coinSymbolInput = document.getElementById('coin-symbol');
@@ -99,6 +104,11 @@ function openModal(coinId, coinName, coinSymbol, currentPrice) {
     investmentInput.value = '';
     updateTotalValueCalc();
 
+    // Reset modal state
+    document.querySelector('input[name="order-type"][value="market"]').checked = true;
+    botSettings.style.display = 'none';
+    modalSubmitBtn.textContent = 'İşlemi Kaydet';
+
     tradeModal.classList.remove('hidden');
 }
 
@@ -109,40 +119,62 @@ function closeModal() {
 
 closeModalBtn.addEventListener('click', closeModal);
 cancelBtn.addEventListener('click', closeModal);
-tradeModal.addEventListener('click', (e) => {
+
+orderTypeRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        if (e.target.value === 'bot') {
+            botSettings.style.display = 'block';
+            modalSubmitBtn.textContent = 'Pusu Kur';
+        } else {
+            botSettings.style.display = 'none';
+            modalSubmitBtn.textContent = 'İşlemi Kaydet';
+        }
+    });
+});
+
+window.addEventListener('click', (e) => {
     if (e.target === tradeModal) closeModal();
 });
 
 function renderCoinCards(coinsData) {
-    coinGrid.innerHTML = '';
-    
+    const loadingState = document.querySelector('.loading-state');
+    if (loadingState) loadingState.remove();
+
     coinsData.forEach(coin => {
         currentPrices[coin.id] = coin.price;
         
-        const changeClass = coin.change24h >= 0 ? 'change-up' : 'change-down';
-        const iconUrl = COIN_ICONS[coin.id];
+        let card = document.getElementById(`card-${coin.id}`);
         
-        const card = document.createElement('div');
-        card.className = 'coin-card glass-panel';
-        card.innerHTML = `
-            <div class="coin-card-header">
-                <img src="${iconUrl}" alt="${coin.name}" class="coin-icon">
-                <div class="coin-name-group">
-                    <h3>${coin.name}</h3>
-                    <span class="coin-symbol">${coin.symbol}</span>
+        if (!card) {
+            const iconUrl = COIN_ICONS[coin.id];
+            card = document.createElement('div');
+            card.id = `card-${coin.id}`;
+            card.className = 'coin-card glass-panel';
+            card.innerHTML = `
+                <div class="coin-card-header">
+                    <img src="${iconUrl}" alt="${coin.name}" class="coin-icon">
+                    <div class="coin-name-group">
+                        <h3>${coin.name}</h3>
+                        <span class="coin-symbol">${coin.symbol}</span>
+                    </div>
                 </div>
-            </div>
-            <div class="coin-price">${formatMoney(coin.price)}</div>
-            <div class="coin-change ${changeClass}">
-                ${formatPercentage(coin.change24h)}
-            </div>
-        `;
-        
-        card.addEventListener('click', () => {
-            openModal(coin.id, coin.name, coin.symbol, coin.price);
-        });
-        
-        coinGrid.appendChild(card);
+                <div class="coin-price" id="price-${coin.id}">${formatMoney(coin.price)}</div>
+                <div class="coin-change" id="change-${coin.id}">
+                    ${formatPercentage(coin.change24h)}
+                </div>
+            `;
+            
+            card.addEventListener('click', () => {
+                openModal(coin.id, coin.name, coin.symbol, currentPrices[coin.id]);
+            });
+            
+            coinGrid.appendChild(card);
+        } else {
+            document.getElementById(`price-${coin.id}`).textContent = formatMoney(coin.price);
+            const changeEl = document.getElementById(`change-${coin.id}`);
+            changeEl.textContent = formatPercentage(coin.change24h);
+            changeEl.className = `coin-change ${coin.change24h >= 0 ? 'change-up' : 'change-down'}`;
+        }
     });
 }
 
@@ -239,90 +271,234 @@ function renderTrades() {
     if (totalPnl > 0) totalPnlEl.className = 'stat-value positive';
     else if (totalPnl < 0) totalPnlEl.className = 'stat-value negative';
     else totalPnlEl.className = 'stat-value neutral';
+}
 
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const id = e.currentTarget.getAttribute('data-id');
-            if(confirm('Bu işlemi silmek istediğinize emin misiniz?')) {
-                const allTrades = Storage.getTrades();
-                const tradeToDelete = allTrades.find(t => t.id === id);
-                if (tradeToDelete && tradeToDelete.status === 'active') {
-                    const currentPrice = currentPrices[tradeToDelete.coinId] || tradeToDelete.buyPrice;
-                    const amount = parseFloat(tradeToDelete.amount);
-                    const buyPrice = parseFloat(tradeToDelete.buyPrice);
-                    const tradeType = tradeToDelete.type || 'long';
-                    
-                    let pnl;
-                    if (tradeType === 'long') {
-                        pnl = (currentPrice - buyPrice) * amount;
-                    } else {
-                        pnl = (buyPrice - currentPrice) * amount;
-                    }
-                    
-                    Storage.updateBalance((buyPrice * amount) + pnl);
+tradesBody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.delete-btn');
+    if (btn) {
+        const id = btn.getAttribute('data-id');
+        if(confirm('Bu işlemi silmek istediğinize emin misiniz?')) {
+            const allTrades = Storage.getTrades();
+            const tradeToDelete = allTrades.find(t => t.id === id);
+            if (tradeToDelete && tradeToDelete.status === 'active') {
+                const currentPrice = currentPrices[tradeToDelete.coinId] || tradeToDelete.buyPrice;
+                const amount = parseFloat(tradeToDelete.amount);
+                const buyPrice = parseFloat(tradeToDelete.buyPrice);
+                const tradeType = tradeToDelete.type || 'long';
+                
+                let pnl;
+                if (tradeType === 'long') {
+                    pnl = (currentPrice - buyPrice) * amount;
+                } else {
+                    pnl = (buyPrice - currentPrice) * amount;
                 }
-                Storage.removeTrade(id);
-                renderTrades();
-                renderBalance();
+                
+                Storage.updateBalance((buyPrice * amount) + pnl);
+                
+                // Bot kontrolü: Eğer bu işlem bir bota bağlıysa ve bot tekrarlıysa onu serbest bırak
+                if (tradeToDelete.linkedBotRuleId) {
+                    const botRules = Storage.getBotRules();
+                    const linkedBot = botRules.find(b => b.id === tradeToDelete.linkedBotRuleId);
+                    if (linkedBot && linkedBot.isRecurring) {
+                        Storage.updateBotRuleStatus(linkedBot.id, 'waiting_to_buy');
+                        renderBotRules();
+                    }
+                }
             }
-        });
-    });
-}
-
-async function updateMarketData() {
-    lastUpdateEl.textContent = 'Güncelleniyor...';
-    
-    const data = await Api.fetchPrices();
-    
-    if (data) {
-        renderCoinCards(data);
-        renderTrades();
-        renderBalance();
-        
-        const now = new Date();
-        lastUpdateEl.textContent = `Son güncelleme: ${now.toLocaleTimeString()}`;
-    } else {
-        lastUpdateEl.textContent = 'Güncelleme hatası!';
+            Storage.removeTrade(id);
+            renderTrades();
+            renderBalance();
+        }
     }
-}
+});
 
 tradeForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
     const buyPrice = parseFloat(buyPriceInput.value);
     const investment = parseFloat(investmentInput.value);
-    const cost = investment;
+    const orderType = document.querySelector('input[name="order-type"]:checked').value;
+    const tradeType = document.querySelector('input[name="trade-type"]:checked').value;
     
-    const currentBalance = Storage.getBalance();
-    if (cost > currentBalance) {
-        alert('Yetersiz bakiye! Kasanızda bu işlem için yeterli tutar bulunmuyor.');
-        return;
+    if (orderType === 'bot') {
+        // Bot Kuralı Ekle (Para şimdi düşmez, tetiklenince düşer)
+        Storage.addBotRule({
+            coinId: coinIdInput.value,
+            coinSymbol: coinSymbolInput.value,
+            buyPrice: buyPrice,
+            sellPrice: parseFloat(sellPriceInput.value),
+            investment: investment,
+            type: tradeType,
+            isRecurring: botRecurringInput.checked
+        });
+        renderBotRules();
+    } else {
+        // Normal İşlem Ekle
+        const cost = investment;
+        const currentBalance = Storage.getBalance();
+        if (cost > currentBalance) {
+            alert('Yetersiz bakiye! Kasanızda bu işlem için yeterli tutar bulunmuyor.');
+            return;
+        }
+        
+        Storage.updateBalance(-cost);
+        renderBalance();
+        
+        const amount = investment / buyPrice;
+        
+        Storage.addTrade({
+            coinId: coinIdInput.value,
+            coinSymbol: coinSymbolInput.value,
+            buyPrice: buyPrice,
+            sellPrice: parseFloat(sellPriceInput.value),
+            amount: amount,
+            type: tradeType
+        });
+        renderTrades();
     }
     
-    Storage.updateBalance(-cost);
-    renderBalance();
-    
-    const tradeType = document.querySelector('input[name="trade-type"]:checked').value;
-    const amount = investment / buyPrice;
-    
-    const newTrade = {
-        coinId: coinIdInput.value,
-        coinSymbol: coinSymbolInput.value,
-        buyPrice: buyPrice,
-        sellPrice: parseFloat(sellPriceInput.value),
-        amount: amount,
-        type: tradeType
-    };
-    
-    Storage.addTrade(newTrade);
     closeModal();
-    renderTrades();
 });
 
-async function init() {
+const botsBody = document.getElementById('bots-body');
+
+function renderBotRules() {
+    const rules = Storage.getBotRules();
+    botsBody.innerHTML = '';
+
+    if (rules.length === 0) {
+        botsBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="loading-state">Henüz bekleyen otomatik bir bot kuralı yok.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    rules.forEach(rule => {
+        const tr = document.createElement('tr');
+        
+        let statusBadge = '';
+        if (rule.status === 'waiting_to_buy') statusBadge = '<span style="color: var(--neon-blue);">Alım Bekliyor ⏳</span>';
+        else if (rule.status === 'waiting_to_sell') statusBadge = '<span style="color: var(--neon-green);">Satış Bekliyor (İşlemde) 📈</span>';
+        else statusBadge = '<span style="color: var(--text-muted);">Durduruldu 🛑</span>';
+
+        tr.innerHTML = `
+            <td>
+                <div class="table-coin-cell">
+                    <img src="${COIN_ICONS[rule.coinId]}" class="table-coin-icon">
+                    ${rule.coinSymbol.toUpperCase()}
+                </div>
+            </td>
+            <td>${formatMoney(rule.investment)}</td>
+            <td>${formatMoney(rule.buyPrice)}</td>
+            <td>${formatMoney(rule.sellPrice)}</td>
+            <td>${rule.isRecurring ? 'Tekrarlı 🔄' : 'Tek Seferlik 1️⃣'}</td>
+            <td>${statusBadge}</td>
+            <td>
+                <button class="delete-bot-btn" data-id="${rule.id}">Sil</button>
+            </td>
+        `;
+        botsBody.appendChild(tr);
+    });
+}
+
+botsBody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.delete-bot-btn');
+    if (btn) {
+        const id = btn.getAttribute('data-id');
+        if(confirm('Bu bot kuralını silmek istediğinize emin misiniz? (Mevcut açık işlemleri etkilemez)')) {
+            Storage.removeBotRule(id);
+            renderBotRules();
+        }
+    }
+});
+
+function checkBotRules() {
+    const rules = Storage.getBotRules();
+    let rulesUpdated = false;
+    let tradesUpdated = false;
+
+    rules.forEach(rule => {
+        if (rule.status === 'waiting_to_buy') {
+            const currentPrice = currentPrices[rule.coinId];
+            if (currentPrice && currentPrice <= rule.buyPrice) {
+                // Fiyat düştü, alım yap!
+                const currentBalance = Storage.getBalance();
+                if (rule.investment <= currentBalance) {
+                    // Bakiyeden düş
+                    Storage.updateBalance(-rule.investment);
+                    
+                    // İşlem aç
+                    const amount = rule.investment / rule.buyPrice;
+                    Storage.addTrade({
+                        coinId: rule.coinId,
+                        coinSymbol: rule.coinSymbol,
+                        buyPrice: rule.buyPrice,
+                        sellPrice: rule.sellPrice,
+                        amount: amount,
+                        type: rule.type,
+                        linkedBotRuleId: rule.id // Bağlantıyı kurduk
+                    });
+                    
+                    Storage.updateBotRuleStatus(rule.id, 'waiting_to_sell');
+                    rulesUpdated = true;
+                    tradesUpdated = true;
+                }
+            }
+        }
+    });
+
+    if (rulesUpdated) renderBotRules();
+    if (tradesUpdated) {
+        renderTrades();
+        renderBalance();
+    }
+}
+
+function handleSocketUpdate(coinsData) {
+    const now = Date.now();
+    
+    // Fiyatları güncelle
+    coinsData.forEach(c => {
+        if (c.price > 0) currentPrices[c.id] = c.price;
+    });
+
+    // Her saniye botları kontrol et
+    checkBotRules();
+    
+    // UI Güncellemesini saniyede maks 2 kez yap (500ms throttle)
+    if (now - lastRenderTime > 500) {
+        const validData = coinsData.filter(c => c.price > 0);
+        if (validData.length > 0) {
+            renderCoinCards(validData);
+            renderTrades();
+            lastRenderTime = now;
+        }
+    }
+}
+
+function init() {
     renderBalance();
-    await updateMarketData();
-    updateInterval = setInterval(updateMarketData, 30000);
+    renderTrades();
+    renderBotRules();
+    
+    const wsApi = new BinanceSocket(handleSocketUpdate);
+    wsApi.onStatusChange = (status) => {
+        if (status === 'connected') {
+            lastUpdateEl.textContent = 'Canlı 🟢';
+            lastUpdateEl.style.color = 'var(--neon-green)';
+        } else if (status === 'disconnected') {
+            lastUpdateEl.textContent = 'Bağlantı koptu, yeniden deneniyor...';
+            lastUpdateEl.style.color = 'var(--neon-red)';
+        } else if (status === 'error') {
+            lastUpdateEl.textContent = 'Bağlantı hatası!';
+            lastUpdateEl.style.color = 'var(--neon-red)';
+        }
+    };
+    
+    lastUpdateEl.textContent = 'Bağlanıyor...';
+    wsApi.connect();
 }
 
 document.addEventListener('DOMContentLoaded', init);

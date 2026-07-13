@@ -39,8 +39,7 @@
             <div class="section-header">
                 <h2>Canlı Piyasalar</h2>
                 <div class="update-indicator">
-                    <span class="dot"></span>
-                    <span id="last-update">Canlı güncelleniyor...</span>
+                    <span id="last-update">Bağlanıyor...</span>
                 </div>
             </div>
             
@@ -82,12 +81,46 @@
                     </tbody>
                 </table>
             </div>
+
+            <div class="glass-panel" style="margin-top: 30px;">
+                <div class="section-header">
+                    <h2>Otomatik Bot Kuralları</h2>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>Yatırım</th>
+                                <th>Pusu (Alım) Fiyatı</th>
+                                <th>Satış Hedefi</th>
+                                <th>Mod</th>
+                                <th>Durum</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bots-body">
+                            <!-- Bot kuralları JS ile yüklenecek -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </section>
     </main>
 
     <div id="trade-modal" class="modal-overlay hidden">
         <div class="modal-content glass-panel">
             <div class="modal-header">
+                <div class="trade-type-selector" style="margin-bottom: 20px; display: flex; gap: 10px;">
+                    <label class="radio-label" style="flex: 1;">
+                        <input type="radio" name="order-type" value="market" checked>
+                        <span>Hemen Al</span>
+                    </label>
+                    <label class="radio-label" style="flex: 1;">
+                        <input type="radio" name="order-type" value="bot">
+                        <span>Pusu Kur (Bot)</span>
+                    </label>
+                </div>
                 <h3 id="modal-title">Yeni İşlem Ekle</h3>
                 <button id="close-modal" class="close-btn">&times;</button>
             </div>
@@ -137,9 +170,17 @@
                     </div>
                 </div>
 
+                <div id="bot-settings" style="display: none; margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border);">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="bot-recurring" checked>
+                        <span style="font-weight: 500;">Sürekli Tekrarla (Grid Modu)</span>
+                    </label>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px; line-height: 1.4;">*Satış hedefine ulaşıp kârı aldığında durmaz, fiyat tekrar Pusu fiyatına düştüğünde yeniden alım yapar.</p>
+                </div>
+
                 <div class="modal-actions">
                     <button type="button" id="cancel-btn" class="btn btn-secondary">İptal</button>
-                    <button type="submit" class="btn btn-primary">İşlemi Kaydet</button>
+                    <button type="submit" class="btn btn-primary" id="modal-submit-btn">İşlemi Kaydet</button>
                 </div>
             </form>
         </div>

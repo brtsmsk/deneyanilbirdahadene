@@ -456,25 +456,31 @@ function checkBotRules() {
     }
 }
 
+let lastRenderTime = 0;
 function handleSocketUpdate(coinsData) {
-    const now = Date.now();
-    
-    // Fiyatları güncelle
-    coinsData.forEach(c => {
-        if (c.price > 0) currentPrices[c.id] = c.price;
-    });
+    try {
+        const now = Date.now();
+        
+        // Fiyatları güncelle
+        coinsData.forEach(c => {
+            if (c.price > 0) currentPrices[c.id] = c.price;
+        });
 
-    // Her saniye botları kontrol et
-    checkBotRules();
-    
-    // UI Güncellemesini saniyede maks 2 kez yap (500ms throttle)
-    if (now - lastRenderTime > 500) {
-        const validData = coinsData.filter(c => c.price > 0);
-        if (validData.length > 0) {
-            renderCoinCards(validData);
-            renderTrades();
-            lastRenderTime = now;
+        // Her saniye botları kontrol et
+        checkBotRules();
+        
+        // UI Güncellemesini saniyede maks 2 kez yap (500ms throttle)
+        if (now - lastRenderTime > 500) {
+            const validData = coinsData.filter(c => c.price > 0);
+            if (validData.length > 0) {
+                renderCoinCards(validData);
+                renderTrades();
+                lastRenderTime = now;
+            }
         }
+    } catch (err) {
+        document.getElementById('last-update').textContent = 'Hata: ' + err.message;
+        document.getElementById('last-update').style.color = 'red';
     }
 }
 

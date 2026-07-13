@@ -35,7 +35,7 @@ const coinIdInput = document.getElementById('coin-id');
 const coinSymbolInput = document.getElementById('coin-symbol');
 const buyPriceInput = document.getElementById('buy-price');
 const sellPriceInput = document.getElementById('sell-price');
-const amountInput = document.getElementById('amount');
+const investmentInput = document.getElementById('investment');
 const totalValueCalc = document.getElementById('total-value-calc');
 const modalCoinImg = document.getElementById('modal-coin-img');
 const modalCoinName = document.getElementById('modal-coin-name');
@@ -74,12 +74,16 @@ function formatPercentage(value) {
 }
 
 function updateTotalValueCalc() {
-    const amount = parseFloat(amountInput.value) || 0;
+    const investment = parseFloat(investmentInput.value) || 0;
     const buyPrice = parseFloat(buyPriceInput.value) || 0;
-    totalValueCalc.textContent = formatMoney(amount * buyPrice);
+    let coinAmount = 0;
+    if (buyPrice > 0) {
+        coinAmount = investment / buyPrice;
+    }
+    totalValueCalc.textContent = coinAmount.toFixed(6) + ' Adet';
 }
 
-[amountInput, buyPriceInput].forEach(input => {
+[investmentInput, buyPriceInput].forEach(input => {
     input.addEventListener('input', updateTotalValueCalc);
 });
 
@@ -92,7 +96,7 @@ function openModal(coinId, coinName, coinSymbol, currentPrice) {
     
     buyPriceInput.value = currentPrice;
     sellPriceInput.value = currentPrice * 1.05;
-    amountInput.value = '';
+    investmentInput.value = '';
     updateTotalValueCalc();
 
     tradeModal.classList.remove('hidden');
@@ -209,7 +213,7 @@ function renderTrades() {
                     ${trade.coinSymbol.toUpperCase()}
                 </div>
             </td>
-            <td>${amount}</td>
+            <td>${formatMoney(buyPrice * amount)}</td>
             <td>${formatMoney(buyPrice)}</td>
             <td>${formatMoney(trade.sellPrice)}</td>
             <td>${formatMoney(currentPrice)}</td>
@@ -286,8 +290,8 @@ tradeForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
     const buyPrice = parseFloat(buyPriceInput.value);
-    const amount = parseFloat(amountInput.value);
-    const cost = buyPrice * amount;
+    const investment = parseFloat(investmentInput.value);
+    const cost = investment;
     
     const currentBalance = Storage.getBalance();
     if (cost > currentBalance) {
@@ -299,6 +303,7 @@ tradeForm.addEventListener('submit', (e) => {
     renderBalance();
     
     const tradeType = document.querySelector('input[name="trade-type"]:checked').value;
+    const amount = investment / buyPrice;
     
     const newTrade = {
         coinId: coinIdInput.value,

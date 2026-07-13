@@ -8,7 +8,7 @@ const TARGET_COINS = [
     { id: 'dogecoin', symbol: 'doge', name: 'Dogecoin', stream: 'dogeusdt' },
     { id: 'avalanche-2', symbol: 'avax', name: 'Avalanche', stream: 'avaxusdt' },
     { id: 'polkadot', symbol: 'dot', name: 'Polkadot', stream: 'dotusdt' },
-    { id: 'polygon-ecosystem-token', symbol: 'pol', name: 'Polygon', stream: 'polusdt' },
+    { id: 'polygon-ecosystem-token', symbol: 'pol', name: 'Polygon', stream: 'maticusdt' },
     { id: 'chainlink', symbol: 'link', name: 'Chainlink', stream: 'linkusdt' },
     { id: 'uniswap', symbol: 'uni', name: 'Uniswap', stream: 'uniusdt' },
     { id: 'the-open-network', symbol: 'ton', name: 'Toncoin', stream: 'tonusdt' },
